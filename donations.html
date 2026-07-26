@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>অনুদান — শহীদ আইয়ুব আলী স্মৃতি সংঘ ও পাঠাগার</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="navRoot"></div>
+
+<main class="wrap">
+
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:22px;">
+    <div class="section-label" style="margin:0;">অনুদান প্রদান করুন</div>
+    <div id="refreshBtnRoot"></div>
+  </div>
+
+  <!-- অনুদান ফর্ম — সবার জন্য উন্মুক্ত -->
+  <div class="panel" style="margin-bottom:30px;">
+    <div class="grid-2">
+      <div>
+        <label>দাতার নাম <span style="color:var(--rust);">*</span></label>
+        <input id="dName" placeholder="আপনার পূর্ণ নাম" />
+      </div>
+      <div>
+        <label>সদস্য আইডি / ফোন নম্বর</label>
+        <input id="dContact" placeholder="ঐচ্ছিক" />
+      </div>
+      <div>
+        <label>অনুদানের পরিমাণ (৳) <span style="color:var(--rust);">*</span></label>
+        <input id="dAmount" type="number" min="1" placeholder="০" />
+      </div>
+      <div>
+        <label>পেমেন্ট পদ্ধতি</label>
+        <select id="dPayMethod" onchange="togglePayMethod()">
+          <option value="cash">ক্যাশ</option>
+          <option value="online">অনলাইন (বিকাশ/নগদ/রকেট)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="cashFields">
+      <label>কার কাছে জমা দিলেন</label>
+      <input id="dCashReceivedBy" placeholder="টাকা গ্রহণকারীর নাম" />
+    </div>
+    <div id="onlineFields" style="display:none;">
+      <div class="grid-2">
+        <div><label>কোন নম্বর হতে</label><input id="dTransFrom" placeholder="প্রেরকের নম্বর" /></div>
+        <div><label>কোন নম্বরে</label><input id="dTransTo" placeholder="গ্রাহকের নম্বর" /></div>
+      </div>
+      <label>ট্রানজেকশন নম্বর <span style="color:var(--rust);">*</span></label>
+      <input id="dTransactionId" placeholder="যেমন: 8N7K2X9P1Q" />
+    </div>
+    <div style="margin-top:12px;">
+      <label>বিশেষ মন্তব্য (ঐচ্ছিক)</label>
+      <input id="dNote" placeholder="যেমন: বার্ষিক অনুদান / বই ক্রয়ের জন্য" />
+    </div>
+    <div style="margin-top:12px; padding:10px 14px; background:rgba(169,121,60,0.08); border-radius:var(--radius); font-size:0.83rem; color:var(--muted);">
+      📅 তারিখ স্বয়ংক্রিয়ভাবে সংরক্ষিত হবে: <strong class="mono" id="todayDisplay"></strong>
+    </div>
+    <button class="btn brass" style="margin-top:20px; width:100%; padding:13px;" onclick="submitDonation()">অনুদান জমা দিন</button>
+    <div id="dMsg"></div>
+  </div>
+
+  <!-- অনুদান তালিকা — শুধু অ্যাডমিন -->
+  <div id="listSection" style="display:none;">
+    <div class="section-label">অনুদানের তালিকা (অ্যাডমিন)</div>
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <input id="filterName" placeholder="নাম দিয়ে খুঁজুন..." style="max-width:240px;" oninput="renderList()" />
+      <select id="filterMethod" style="max-width:180px;" onchange="renderList()">
+        <option value="">সব পদ্ধতি</option>
+        <option value="cash">ক্যাশ</option>
+        <option value="online">অনলাইন</option>
+      </select>
+    </div>
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>তারিখ</th><th>দাতার নাম</th><th>আইডি/ফোন</th>
+          <th>পরিমাণ</th><th>পদ্ধতি</th><th>বিবরণ</th><th>মন্তব্য</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="donationBody"></tbody>
+    </table></div>
+    <div class="empty-state" id="donationEmpty" style="display:none;">এখনো কোনো অনুদান নেই।</div>
+  </div>
+
+  <!-- লগইন প্রম্পট — পাবলিক -->
+  <div id="listLoginPrompt" class="panel" style="text-align:center; color:var(--muted);">
+    <p style="margin:0 0 10px;">অনুদানের বিস্তারিত তালিকা দেখতে অ্যাডমিন লগইন করুন।</p>
+    <button class="btn outline" onclick="openAdminLogin()">অ্যাডমিন লগইন</button>
+  </div>
+
+</main>
+
+<div id="adminModalRoot"></div>
+<div class="footer">শহীদ আইয়ুব আলী স্মৃতি সংঘ ও পাঠাগার · কুলানন্দপুর, বলগাড়ী, ঘোড়াঘাট, দিনাজপুর</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+renderNav('donations.html');
+renderRefreshBtn(loadDonations);
+document.getElementById('todayDisplay').textContent = fmtDate(new Date());
+
+let allDonations = [];
+
+function onAdminStateChange() {
+  document.getElementById('listSection').style.display = isAdmin() ? 'block' : 'none';
+  document.getElementById('listLoginPrompt').style.display = isAdmin() ? 'none' : 'block';
+  if (isAdmin()) loadDonations();
+}
+
+function togglePayMethod() {
+  const online = document.getElementById('dPayMethod').value === 'online';
+  document.getElementById('cashFields').style.display = online ? 'none' : 'block';
+  document.getElementById('onlineFields').style.display = online ? 'block' : 'none';
+}
+
+async function submitDonation() {
+  const payMethod = document.getElementById('dPayMethod').value;
+  const payload = {
+    donorName:      document.getElementById('dName').value.trim(),
+    donorContact:   document.getElementById('dContact').value.trim(),
+    amount:         document.getElementById('dAmount').value,
+    paymentMethod:  payMethod,
+    cashReceivedBy: payMethod === 'cash'   ? document.getElementById('dCashReceivedBy').value.trim() : '',
+    transFrom:      payMethod === 'online' ? document.getElementById('dTransFrom').value.trim() : '',
+    transTo:        payMethod === 'online' ? document.getElementById('dTransTo').value.trim() : '',
+    transactionId:  payMethod === 'online' ? document.getElementById('dTransactionId').value.trim() : '',
+    note:           document.getElementById('dNote').value.trim(),
+  };
+  const msg = document.getElementById('dMsg');
+  if (!payload.donorName) { msg.innerHTML = `<div class="msg error">দাতার নাম আবশ্যক</div>`; return; }
+  if (!payload.amount || Number(payload.amount) <= 0) { msg.innerHTML = `<div class="msg error">সঠিক পরিমাণ দিন</div>`; return; }
+  if (payMethod === 'online' && !payload.transactionId) { msg.innerHTML = `<div class="msg error">ট্রানজেকশন নম্বর আবশ্যক</div>`; return; }
+
+  const res = await Api.post('addDonation', payload);
+  if (res.error) { msg.innerHTML = `<div class="msg error">${res.error}</div>`; return; }
+  msg.innerHTML = `
+    <div class="msg success" style="padding:14px;">
+      ✅ অনুদান সফলভাবে সংরক্ষিত হয়েছে (রেফারেন্স: <strong class="mono">${res.id}</strong>)<br>
+      <span style="font-size:0.83rem; opacity:.85;">আপনার মূল্যবান সহযোগিতার জন্য আন্তরিক ধন্যবাদ।</span>
+    </div>`;
+  ['dName','dContact','dAmount','dCashReceivedBy','dTransFrom','dTransTo','dTransactionId','dNote']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('dPayMethod').value = 'cash';
+  togglePayMethod();
+  if (isAdmin()) loadDonations();
+}
+
+async function loadDonations() {
+  allDonations = await Api.get('listDonations') || [];
+  renderList();
+}
+
+function renderList() {
+  const nameQ   = document.getElementById('filterName')?.value.trim().toLowerCase() || '';
+  const methodQ = document.getElementById('filterMethod')?.value || '';
+  let list = allDonations;
+  if (nameQ)   list = list.filter(d => String(d.DonorName).toLowerCase().includes(nameQ));
+  if (methodQ) list = list.filter(d => d.PaymentMethod === methodQ);
+
+  const body  = document.getElementById('donationBody');
+  const empty = document.getElementById('donationEmpty');
+  if (!body) return;
+  if (list.length === 0) { body.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  body.innerHTML = list.map(d => {
+    const badge = d.PaymentMethod === 'online'
+      ? `<span class="tag role">অনলাইন</span>`
+      : `<span class="tag available">ক্যাশ</span>`;
+    const detail = d.PaymentMethod === 'cash'
+      ? (d.CashReceivedBy ? `গ্রহণকারী: ${d.CashReceivedBy}` : '—')
+      : [d.TransFrom ? `হতে: ${d.TransFrom}` : '', d.TransTo ? `→ ${d.TransTo}` : '', d.TransactionID ? `ট্রা: ${d.TransactionID}` : ''].filter(Boolean).join(' · ') || '—';
+    return `<tr>
+      <td class="mono" style="white-space:nowrap;">${fmtDate(d.Date)}</td>
+      <td><strong>${d.DonorName}</strong></td>
+      <td class="mono" style="font-size:0.82rem;">${d.DonorContact || '—'}</td>
+      <td class="mono" style="color:var(--sage); font-weight:700;">৳${Number(d.Amount).toLocaleString('bn-BD')}</td>
+      <td>${badge}</td>
+      <td style="font-size:0.8rem; color:var(--muted);">${detail}</td>
+      <td style="font-size:0.85rem; color:var(--muted);">${d.Note || '—'}</td>
+      <td><button class="btn small" style="background:var(--rust);" onclick="removeDonation('${d.ID}')">ডিলিট</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function removeDonation(id) {
+  if (!confirm('এই অনুদান এন্ট্রিটি মুছে ফেলতে চান?')) return;
+  await Api.post('deleteDonation', { id });
+  loadDonations();
+}
+
+onAdminStateChange();
+</script>
+</body>
+</html>
