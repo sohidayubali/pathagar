@@ -186,10 +186,14 @@ async function loadNotices() {
   empty.style.display = 'none';
 
   el.innerHTML = allNotices.map(function(n) {
+    // ---- সেফটি ফলব্যাক: Title/Content খালি থাকলেও যেন crash না হয় ----
+    const safeTitle   = n.Title   || '(শিরোনামহীন)';
+    const safeContent = n.Content || '';
+
     const thumb = n.ImageURL
       ? '<img class="notice-card-thumb" src="' + n.ImageURL + '" alt="" />'
       : '<div class="notice-card-thumb-placeholder">📢</div>';
-    const preview = (n.Content || '').replace(/<[^>]+>/g, '').slice(0, 120);
+    const preview = safeContent.replace(/<[^>]+>/g, '').slice(0, 120);
     const adminBtns = isAdmin()
       ? '<button class="btn small" style="background:var(--rust);" onclick="event.stopPropagation();removeNotice(\'' + n.ID + '\')">ডিলিট</button>'
       : '';
@@ -197,14 +201,14 @@ async function loadNotices() {
       '<div class="notice-card-header">' + thumb +
         '<div class="notice-card-body">' +
           '<div class="notice-card-date">' + fmtDate(n.Date) + '</div>' +
-          '<div class="notice-card-title">' + n.Title + '</div>' +
+          '<div class="notice-card-title">' + safeTitle + '</div>' +
           '<div class="notice-card-preview">' + preview + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="notice-card-footer">' +
         '<span class="notice-read-btn">📖 বিস্তারিত পড়ুন →</span>' +
         '<div onclick="event.stopPropagation();">' +
-          '<button class="btn small outline" onclick="ShareUtil.show(this.dataset.t,\'📢 \'+this.dataset.t+\' — শহীদ আইয়ুব আলী পাঠাগার\')" data-t="' + n.Title.replace(/"/g, '&quot;') + '" data-id="' + n.ID + '">🔗 শেয়ার</button>' +
+          '<button class="btn small outline" onclick="ShareUtil.show(this.dataset.t,\'📢 \'+this.dataset.t+\' — শহীদ আইয়ুব আলী পাঠাগার\')" data-t="' + safeTitle.replace(/"/g, '&quot;') + '" data-id="' + n.ID + '">🔗 শেয়ার</button>' +
           ' ' + adminBtns +
         '</div>' +
       '</div>' +
@@ -217,8 +221,12 @@ function openNotice(id) {
   const n = allNotices.find(function(x) { return x.ID === id; });
   if (!n) return;
 
+  // ---- সেফটি ফলব্যাক ----
+  const safeTitle   = n.Title   || '(শিরোনামহীন)';
+  const safeContent = n.Content || '';
+
   const heroImg = n.ImageURL
-    ? '<img class="notice-modal-hero" src="' + n.ImageURL + '" alt="' + n.Title + '" />'
+    ? '<img class="notice-modal-hero" src="' + n.ImageURL + '" alt="' + safeTitle + '" />'
     : '';
 
   document.getElementById('noticeModalRoot').innerHTML =
@@ -228,11 +236,11 @@ function openNotice(id) {
         heroImg +
         '<div class="notice-modal-body">' +
           '<div class="notice-modal-date">' + fmtDate(n.Date) + '</div>' +
-          '<div class="notice-modal-title">' + n.Title + '</div>' +
-          '<div class="notice-modal-content">' + (n.Content || '') + '</div>' +
+          '<div class="notice-modal-title">' + safeTitle + '</div>' +
+          '<div class="notice-modal-content">' + safeContent + '</div>' +
           '<div class="notice-modal-actions">' +
             '<button class="btn outline" onclick="closeNotice()">← ফিরে যান</button>' +
-            '<button class="btn outline" onclick="ShareUtil.show(\'' + n.Title.replace(/'/g, "\\'") + '\',\'📢 ' + n.Title.replace(/'/g, "\\'") + ' — শহীদ আইয়ুব আলী পাঠাগার\')">🔗 শেয়ার করুন</button>' +
+            '<button class="btn outline" onclick="ShareUtil.show(\'' + safeTitle.replace(/'/g, "\\'") + '\',\'📢 ' + safeTitle.replace(/'/g, "\\'") + ' — শহীদ আইয়ুব আলী পাঠাগার\')">🔗 শেয়ার করুন</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
